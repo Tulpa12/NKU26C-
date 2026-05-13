@@ -17,14 +17,20 @@ set(PROJECT_SOURCES
         mainwindow.cpp
         mainwindow.h
         mainwindow.ui
-        gamescene.cpp
-        gamescene.h
+        unit.cpp
+        unit.h
         worker.cpp
         worker.h
+        soldier.cpp
+        soldier.h
+        enemy.cpp
+        enemy.h
         building.cpp
         building.h
         resource.cpp
         resource.h
+        gamescene.cpp
+        gamescene.h
 )
 
 if(${QT_VERSION_MAJOR} GREATER_EQUAL 6)

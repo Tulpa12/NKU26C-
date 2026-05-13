@@ -1,13 +1,12 @@
 #ifndef WORKER_H
 #define WORKER_H
 
-#include <QGraphicsRectItem>
-#include <QPointF>
+#include "unit.h"
 
 class ResourceNode;
 class CommandCenter;
 
-class Worker : public QGraphicsRectItem {
+class Worker : public Unit {
 public:
     enum State { IDLE, MOVING_TO_TARGET, MOVING_TO_RESOURCE, HARVESTING, MOVING_TO_BASE };
 
@@ -15,9 +14,7 @@ public:
 
     void moveTo(const QPointF& target);
     void gatherFrom(ResourceNode* resource);
-    void setSelected(bool sel);
-    bool isSelected() const;
-    void updateUnit();
+    void updateUnit() override;
     int takeDepositedGold();
 
     enum { Type = QGraphicsItem::UserType + 3 };
@@ -28,16 +25,14 @@ public:
 
 private:
     State m_state;
-    double m_speed;
     QPointF m_moveTarget;
     ResourceNode* m_targetResource;
     CommandCenter* m_base;
     int m_carriedGold;
     int m_harvestTimer;
     int m_pendingDeposit;
-    bool m_selected;
 
-    static constexpr int HARVEST_TIME = 30;  // ticks
+    static constexpr int HARVEST_TIME = 30;
     static constexpr int CARRY_CAPACITY = 10;
 };
 

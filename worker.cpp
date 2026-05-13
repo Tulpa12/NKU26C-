@@ -4,24 +4,18 @@
 #include <QPainter>
 #include <QPen>
 #include <QFont>
-#include <QStyleOptionGraphicsItem>
-#include <cmath>
 
 Worker::Worker(const QPointF& pos, CommandCenter* base, QGraphicsItem* parent)
-    : QGraphicsRectItem(-10, -10, 20, 20, parent)
+    : Unit(30, 3.0, pos, QRectF(-10, -10, 20, 20), parent)
     , m_state(IDLE)
-    , m_speed(3.0)
     , m_targetResource(nullptr)
     , m_base(base)
     , m_carriedGold(0)
     , m_harvestTimer(0)
     , m_pendingDeposit(0)
-    , m_selected(false)
 {
-    setPos(pos);
     setBrush(Qt::blue);
     setPen(QPen(Qt::darkBlue, 1));
-    setZValue(1);
 }
 
 void Worker::moveTo(const QPointF& target)
@@ -38,20 +32,8 @@ void Worker::gatherFrom(ResourceNode* resource)
         return;
     m_state = MOVING_TO_RESOURCE;
     m_targetResource = resource;
-    QPointF offset(30, 0);
-    m_moveTarget = resource->scenePos() + offset;
+    m_moveTarget = resource->scenePos() + QPointF(30, 0);
     m_harvestTimer = 0;
-}
-
-void Worker::setSelected(bool sel)
-{
-    m_selected = sel;
-    update();
-}
-
-bool Worker::isSelected() const
-{
-    return m_selected;
 }
 
 int Worker::takeDepositedGold()
@@ -80,14 +62,9 @@ void Worker::updateUnit()
         return;
     }
 
-    // Moving states
-    QPointF current = scenePos();
-    QPointF dir = m_moveTarget - current;
-    double dist = std::sqrt(dir.x() * dir.x() + dir.y() * dir.y());
+    bool arrived = moveTowards(m_moveTarget);
 
-    if (dist < m_speed) {
-        setPos(m_moveTarget);
-
+    if (arrived) {
         if (m_state == MOVING_TO_RESOURCE) {
             if (m_targetResource && !m_targetResource->isDepleted()) {
                 m_state = HARVESTING;
@@ -105,16 +82,12 @@ void Worker::updateUnit()
         } else if (m_state == MOVING_TO_TARGET) {
             m_state = IDLE;
         }
-    } else {
-        dir /= dist;
-        setPos(current + dir * m_speed);
     }
 }
 
 void Worker::paint(QPainter* painter, const QStyleOptionGraphicsItem* option,
                    QWidget* widget)
 {
-    // Body color based on state
     QColor bodyColor = Qt::blue;
     if (m_state == HARVESTING)
         bodyColor = QColor(200, 200, 50);
@@ -122,21 +95,13 @@ void Worker::paint(QPainter* painter, const QStyleOptionGraphicsItem* option,
         bodyColor = QColor(255, 200, 0);
 
     painter->setBrush(bodyColor);
-    if (m_selected) {
+    if (m_selected)
         painter->setPen(QPen(Qt::green, 2.5));
-    } else {
+    else
         painter->setPen(QPen(Qt::darkBlue, 1));
-    }
-    painter->drawRect(rect());
 
-    // Selection indicator
-    if (m_selected) {
-        painter->setBrush(Qt::NoBrush);
-        painter->setPen(QPen(Qt::green, 1.5, Qt::DashLine));
-        painter->drawRect(rect().adjusted(-4, -4, 4, 4));
-    }
+    Unit::paint(painter, option, widget);
 
-    // State label
     if (m_state == HARVESTING) {
         painter->setPen(Qt::black);
         painter->setFont(QFont("Arial", 7));
