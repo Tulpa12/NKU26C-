@@ -15,9 +15,6 @@ public:
     int health() const;
     int maxHealth() const;
 
-    void setSelected(bool sel);
-    bool isSelected() const;
-
     virtual void updateUnit() = 0;
 
     enum { Type = QGraphicsItem::UserType + 10 };
@@ -31,7 +28,6 @@ protected:
     int m_hp;
     int m_maxHp;
     double m_speed;
-    bool m_selected;
 };
 
 #endif

@@ -1,17 +1,19 @@
 #include "soldier.h"
 #include "enemy.h"
+#include "texturemanager.h"
 #include <QPainter>
 #include <QPen>
+#include <QStyleOptionGraphicsItem>
 #include <cmath>
 
 Soldier::Soldier(const QPointF& pos, QGraphicsItem* parent)
-    : Unit(60, 2.5, pos, QRectF(-11, -11, 22, 22), parent)
+    : Unit(60, 2.5, pos, QRectF(-16, -16, 32, 32), parent)
     , m_state(IDLE)
     , m_attackTarget(nullptr)
     , m_attackCooldown(0)
+    , m_attackMove(false)
 {
-    setBrush(QColor(60, 180, 60));
-    setPen(QPen(Qt::darkGreen, 1.5));
+    setFlag(QGraphicsItem::ItemIsSelectable, true);
 }
 
 void Soldier::moveTo(const QPointF& target)
@@ -37,7 +39,6 @@ void Soldier::updateUnit()
     if (m_attackCooldown > 0)
         m_attackCooldown--;
 
-    // Validate current attack target
     if (m_attackTarget && m_attackTarget->isDead()) {
         m_attackTarget = nullptr;
         m_state = IDLE;
@@ -70,19 +71,20 @@ void Soldier::updateUnit()
         }
         return;
     }
-
-    // IDLE: auto-scan for nearby enemies
-    // (Enemy scanning is handled by GameScene)
 }
 
 void Soldier::paint(QPainter* painter, const QStyleOptionGraphicsItem* option,
                     QWidget* widget)
 {
-    painter->setBrush(QColor(60, 180, 60));
-    if (m_selected)
-        painter->setPen(QPen(Qt::green, 2.5));
-    else
-        painter->setPen(QPen(Qt::darkGreen, 1.5));
+    const QPixmap& tex = TextureManager::instance().soldierTex();
+    painter->drawPixmap(rect().toRect(), tex);
 
     Unit::paint(painter, option, widget);
+
+    // Attack-move indicator
+    if (m_attackMove) {
+        painter->setPen(QPen(Qt::red, 2));
+        painter->setBrush(Qt::NoBrush);
+        painter->drawEllipse(rect().adjusted(-6, -6, 6, 6));
+    }
 }

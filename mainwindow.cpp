@@ -1,10 +1,13 @@
 #include "mainwindow.h"
 #include "gamescene.h"
+#include "soldier.h"
+#include "texturemanager.h"
 
 #include <QGraphicsView>
 #include <QStatusBar>
 #include <QToolBar>
 #include <QMessageBox>
+#include <QComboBox>
 #include <QLabel>
 
 MainWindow::MainWindow(QWidget *parent)
@@ -12,45 +15,101 @@ MainWindow::MainWindow(QWidget *parent)
     , m_scene(nullptr)
     , m_view(nullptr)
 {
-    setWindowTitle(QString::fromUtf8("Mini RTS - V2.0"));
+    setWindowTitle(QString::fromUtf8("Mini RTS - V3.0"));
 
     m_scene = new GameScene(this);
 
     m_view = new QGraphicsView(m_scene, this);
     m_view->setRenderHint(QPainter::Antialiasing);
-    m_view->setDragMode(QGraphicsView::ScrollHandDrag);
+    m_view->setDragMode(QGraphicsView::RubberBandDrag);
     m_view->setHorizontalScrollBarPolicy(Qt::ScrollBarAlwaysOff);
     m_view->setVerticalScrollBarPolicy(Qt::ScrollBarAlwaysOff);
     m_view->setViewportUpdateMode(QGraphicsView::FullViewportUpdate);
     setCentralWidget(m_view);
 
-    statusBar()->showMessage(QString::fromUtf8("金矿: 100 | 工人: 2 | 士兵: 1 | 选中: 无"));
+    statusBar()->showMessage(QString::fromUtf8("波次: 0/15 | 金矿: 100 | 工人: 2 | 士兵: 1 | 选中: 0"));
+
+    // Toolbar
+    QToolBar* toolbar = addToolBar(QString::fromUtf8("游戏"));
+
+    // Pause button (declared early so other connects can reference it)
+    QAction* pauseAction = toolbar->addAction(QString::fromUtf8("暂停"));
+    pauseAction->setCheckable(true);
+    pauseAction->setShortcut(QKeySequence(Qt::Key_Space));
+    toolbar->addSeparator();
+
+    // Texture pack selector
+    toolbar->addWidget(new QLabel(QString::fromUtf8(" 皮肤: ")));
+    QComboBox* skinBox = new QComboBox();
+    QStringList packs = TextureManager::instance().availablePacks();
+    if (packs.isEmpty())
+        packs.append(QString::fromUtf8("默认"));
+    skinBox->addItems(packs);
+    skinBox->setCurrentText(TextureManager::instance().currentPack().isEmpty()
+                                ? packs.first()
+                                : TextureManager::instance().currentPack());
+    connect(skinBox, &QComboBox::currentTextChanged, this, [this](const QString& pack) {
+        TextureManager::instance().loadPack(pack);
+        m_scene->reloadBackground();
+        m_scene->update();
+    });
+    toolbar->addWidget(skinBox);
+    toolbar->addSeparator();
+
+    QAction* workerAction = toolbar->addAction(QString::fromUtf8("训练工人 (50金)"));
+    QAction* soldierAction = toolbar->addAction(QString::fromUtf8("训练士兵 (30金)"));
+    toolbar->addSeparator();
+
+    QAction* amoveAction = toolbar->addAction(QString::fromUtf8("A-移动: 关"));
+    amoveAction->setCheckable(true);
+
+    toolbar->addSeparator();
+    QAction* helpAction = toolbar->addAction(QString::fromUtf8("帮助"));
+
+    // === Connections ===
 
     connect(m_scene, &GameScene::statsChanged, this,
-            [this](int gold, int workers, int soldiers, const QString& sel) {
+            [this](int gold, int workers, int soldiers, int selected, int wave) {
         statusBar()->showMessage(
-            QString::fromUtf8("金矿: %1 | 工人: %2 | 士兵: %3 | 选中: %4")
-                .arg(gold).arg(workers).arg(soldiers).arg(sel));
+            QString::fromUtf8("波次: %1/%2 | 金矿: %3 | 工人: %4 | 士兵: %5 | 选中: %6")
+                .arg(wave).arg(15).arg(gold).arg(workers).arg(soldiers).arg(selected));
     });
 
-    connect(m_scene, &GameScene::gameOver, this, [this](bool victory) {
-        Q_UNUSED(victory);
+    connect(m_scene, &GameScene::gameOver, this, [this, pauseAction](bool victory) {
+        pauseAction->setChecked(false);
+        pauseAction->setText(QString::fromUtf8("暂停"));
+        pauseAction->setEnabled(false);
         QMessageBox msgBox;
-        msgBox.setWindowTitle(QString::fromUtf8("游戏结束"));
-        msgBox.setText(QString::fromUtf8("你的基地被摧毁了！"));
-        msgBox.setInformativeText(QString::fromUtf8(
-            "敌人摧毁了指挥中心。\n"
-            "你在本局存活了数波进攻。\n\n"
-            "请查看状态栏查看存活波数。"));
+        if (victory) {
+            msgBox.setWindowTitle(QString::fromUtf8("胜利!"));
+            msgBox.setText(QString::fromUtf8("恭喜！你成功守住了基地！"));
+            msgBox.setInformativeText(QString::fromUtf8("你存活了全部15波进攻。"));
+        } else {
+            msgBox.setWindowTitle(QString::fromUtf8("游戏结束"));
+            msgBox.setText(QString::fromUtf8("你的基地被摧毁了！"));
+            msgBox.setInformativeText(QString::fromUtf8("敌人摧毁了指挥中心。"));
+        }
         msgBox.setStandardButtons(QMessageBox::Ok);
         msgBox.exec();
     });
 
-    // Toolbar
-    QToolBar* toolbar = addToolBar(QString::fromUtf8("游戏"));
-    QAction* workerAction = toolbar->addAction(QString::fromUtf8("训练工人 (50金)"));
-    QAction* soldierAction = toolbar->addAction(QString::fromUtf8("训练士兵 (30金)"));
-    QAction* helpAction = toolbar->addAction(QString::fromUtf8("帮助"));
+    connect(pauseAction, &QAction::toggled, this, [this, pauseAction](bool checked) {
+        m_scene->togglePause();
+        pauseAction->setText(checked ? QString::fromUtf8("继续") : QString::fromUtf8("暂停"));
+    });
+
+    connect(m_scene, &GameScene::pauseChanged, this, [pauseAction](bool paused) {
+        pauseAction->setChecked(paused);
+        pauseAction->setText(paused ? QString::fromUtf8("继续") : QString::fromUtf8("暂停"));
+    });
+
+    connect(amoveAction, &QAction::toggled, this, [this, amoveAction](bool checked) {
+        for (auto* item : m_scene->items()) {
+            Soldier* s = qgraphicsitem_cast<Soldier*>(item);
+            if (s) s->setAttackMove(checked);
+        }
+        amoveAction->setText(checked ? QString::fromUtf8("A-移动: 开") : QString::fromUtf8("A-移动: 关"));
+    });
 
     connect(workerAction, &QAction::triggered, this, [this]() {
         if (!m_scene->spawnWorker())
@@ -64,20 +123,25 @@ MainWindow::MainWindow(QWidget *parent)
 
     connect(helpAction, &QAction::triggered, this, [this]() {
         QMessageBox::information(this,
-            QString::fromUtf8("操作说明"),
+            QString::fromUtf8("操作说明 V3.0"),
             QString::fromUtf8(
-                "【V2.0 新增】\n"
-                "左键点击单位 → 选中工人/士兵\n"
+                "【快捷键】\n"
+                "空格键 → 暂停 / 继续\n"
+                "\n"
+                "【贴图系统】\n"
+                "工具栏「皮肤」下拉切换贴图包\n"
+                "将你的PNG图片放入 images/新文件夹/\n"
+                "文件名: worker.png, soldier.png, enemy.png,\n"
+                " boss.png, base.png, goldmine.png, background.png\n"
+                "\n"
+                "【操作】\n"
+                "左键拖拽 → 框选单位\n"
                 "右键空地 → 移动选中单位\n"
-                "右键金矿(工人) → 采集资源\n"
-                "右键敌人(士兵) → 攻击敌人\n"
+                "右键金矿 → 采集\n"
+                "右键敌人 → 攻击\n"
+                "A-移动 → 行军途中自动攻击\n"
                 "\n"
-                "工人（蓝）: 采集金矿，自动往返\n"
-                "士兵（绿）: 自动攻击附近敌人\n"
-                "敌人（红）: 从地图边缘出现，攻击基地\n"
-                "\n"
-                "金矿采完会枯竭，击杀敌人获得15金\n"
-                "保护基地！基地被摧毁游戏结束"));
+                "【目标】存活15波! 每5波出Boss"));
     });
 
     m_scene->startGame();

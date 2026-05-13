@@ -1,12 +1,14 @@
 #include "worker.h"
 #include "resource.h"
 #include "building.h"
+#include "texturemanager.h"
 #include <QPainter>
 #include <QPen>
 #include <QFont>
+#include <QStyleOptionGraphicsItem>
 
 Worker::Worker(const QPointF& pos, CommandCenter* base, QGraphicsItem* parent)
-    : Unit(30, 3.0, pos, QRectF(-10, -10, 20, 20), parent)
+    : Unit(30, 3.0, pos, QRectF(-16, -16, 32, 32), parent)
     , m_state(IDLE)
     , m_targetResource(nullptr)
     , m_base(base)
@@ -14,8 +16,7 @@ Worker::Worker(const QPointF& pos, CommandCenter* base, QGraphicsItem* parent)
     , m_harvestTimer(0)
     , m_pendingDeposit(0)
 {
-    setBrush(Qt::blue);
-    setPen(QPen(Qt::darkBlue, 1));
+    setFlag(QGraphicsItem::ItemIsSelectable, true);
 }
 
 void Worker::moveTo(const QPointF& target)
@@ -32,7 +33,7 @@ void Worker::gatherFrom(ResourceNode* resource)
         return;
     m_state = MOVING_TO_RESOURCE;
     m_targetResource = resource;
-    m_moveTarget = resource->scenePos() + QPointF(30, 0);
+    m_moveTarget = resource->scenePos() + QPointF(35, 0);
     m_harvestTimer = 0;
 }
 
@@ -88,24 +89,24 @@ void Worker::updateUnit()
 void Worker::paint(QPainter* painter, const QStyleOptionGraphicsItem* option,
                    QWidget* widget)
 {
-    QColor bodyColor = Qt::blue;
-    if (m_state == HARVESTING)
-        bodyColor = QColor(200, 200, 50);
-    else if (m_carriedGold > 0)
-        bodyColor = QColor(255, 200, 0);
+    // Draw texture
+    const QPixmap& tex = TextureManager::instance().workerTex();
+    painter->drawPixmap(rect().toRect(), tex);
 
-    painter->setBrush(bodyColor);
-    if (m_selected)
-        painter->setPen(QPen(Qt::green, 2.5));
-    else
-        painter->setPen(QPen(Qt::darkBlue, 1));
+    // Carrying gold overlay
+    if (m_carriedGold > 0 && m_state != HARVESTING) {
+        painter->setBrush(QColor(255, 200, 0, 80));
+        painter->setPen(Qt::NoPen);
+        painter->drawRect(rect());
+    }
 
     Unit::paint(painter, option, widget);
 
+    // State label
     if (m_state == HARVESTING) {
         painter->setPen(Qt::black);
-        painter->setFont(QFont("Arial", 7));
-        painter->drawText(rect().adjusted(0, -14, 0, -2), Qt::AlignCenter,
+        painter->setFont(QFont("Arial", 8, QFont::Bold));
+        painter->drawText(rect().adjusted(0, -18, 0, -2), Qt::AlignCenter,
                           QString::fromUtf8("采集"));
     }
 }

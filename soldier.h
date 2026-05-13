@@ -14,6 +14,8 @@ public:
     void moveTo(const QPointF& target);
     void attackTarget(Enemy* enemy);
     void updateUnit() override;
+    void setAttackMove(bool enabled) { m_attackMove = enabled; }
+    bool isAttackMove() const { return m_attackMove; }
 
     Enemy* currentTarget() const { return m_attackTarget; }
     void clearTarget() { m_attackTarget = nullptr; m_state = IDLE; }
@@ -29,6 +31,7 @@ private:
     QPointF m_moveTarget;
     Enemy* m_attackTarget;
     int m_attackCooldown;
+    bool m_attackMove;
 
     static constexpr int ATTACK_DAMAGE = 8;
     static constexpr int ATTACK_RANGE = 50;

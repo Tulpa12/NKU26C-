@@ -1,11 +1,14 @@
 #include "gamescene.h"
-#include "unit.h"
 #include "worker.h"
 #include "soldier.h"
 #include "enemy.h"
+#include "bossenemy.h"
 #include "building.h"
 #include "resource.h"
+#include "texturemanager.h"
 #include <QGraphicsSceneMouseEvent>
+#include <QGraphicsTextItem>
+#include <QFont>
 #include <QMessageBox>
 #include <cstdlib>
 #include <ctime>
@@ -15,14 +18,18 @@ GameScene::GameScene(QObject* parent)
     : QGraphicsScene(parent)
     , m_base(nullptr)
     , m_timer(new QTimer(this))
-    , m_selectedUnit(nullptr)
+    , m_hudText(nullptr)
     , m_gold(100)
     , m_enemySpawnTimer(0)
     , m_waveNumber(0)
+    , m_maxWaves(15)
     , m_gameOver(false)
+    , m_victory(false)
+    , m_paused(false)
 {
     setSceneRect(0, 0, 1200, 900);
-    setBackgroundBrush(QColor(50, 130, 50));
+    QPixmap bg = TextureManager::instance().backgroundTex();
+    setBackgroundBrush(QBrush(bg));
     std::srand(static_cast<unsigned>(std::time(nullptr)));
     connect(m_timer, &QTimer::timeout, this, &GameScene::gameTick);
 }
@@ -30,6 +37,25 @@ GameScene::GameScene(QObject* parent)
 GameScene::~GameScene()
 {
     m_timer->stop();
+}
+
+void GameScene::togglePause()
+{
+    if (m_gameOver) return;
+    m_paused = !m_paused;
+    if (m_paused) {
+        m_timer->stop();
+    } else {
+        m_timer->start(50);
+    }
+    updateHUD();
+    emit pauseChanged(m_paused);
+}
+
+void GameScene::reloadBackground()
+{
+    QPixmap bg = TextureManager::instance().backgroundTex();
+    setBackgroundBrush(QBrush(bg));
 }
 
 void GameScene::startGame()
@@ -54,97 +80,96 @@ void GameScene::startGame()
     m_soldiers.append(s1);
     addItem(s1);
 
-    m_enemySpawnTimer = 160; // First wave at ~8 seconds
+    // HUD
+    m_hudText = new QGraphicsTextItem();
+    m_hudText->setPos(10, 10);
+    m_hudText->setDefaultTextColor(Qt::white);
+    m_hudText->setFont(QFont("Arial", 13, QFont::Bold));
+    m_hudText->setZValue(100);
+    addItem(m_hudText);
+    updateHUD();
+
+    m_enemySpawnTimer = 160;
     m_timer->start(50);
-    emit statsChanged(m_gold, m_workers.size(), m_soldiers.size(), QString::fromUtf8("无"));
+    emit statsChanged(m_gold, m_workers.size(), m_soldiers.size(), 0, m_waveNumber);
 }
 
 bool GameScene::spawnWorker()
 {
-    if (m_gold < 50)
-        return false;
+    if (m_gold < 50) return false;
     m_gold -= 50;
-
     QPointF bp = m_base->scenePos();
     Worker* w = new Worker(QPointF(bp.x() + (std::rand() % 80) - 40,
                                     bp.y() + (std::rand() % 80) - 40), m_base);
     m_workers.append(w);
     addItem(w);
-
-    emit statsChanged(m_gold, m_workers.size(), m_soldiers.size(),
-                      m_selectedUnit ? QString::fromUtf8("单位") : QString::fromUtf8("无"));
+    int sel = selectedItems().size();
+    emit statsChanged(m_gold, m_workers.size(), m_soldiers.size(), sel, m_waveNumber);
     return true;
 }
 
 bool GameScene::spawnSoldier()
 {
-    if (m_gold < 30)
-        return false;
+    if (m_gold < 30) return false;
     m_gold -= 30;
-
     QPointF bp = m_base->scenePos();
     Soldier* s = new Soldier(QPointF(bp.x() + (std::rand() % 80) - 40,
                                       bp.y() + (std::rand() % 80) - 40));
     m_soldiers.append(s);
     addItem(s);
-
-    emit statsChanged(m_gold, m_workers.size(), m_soldiers.size(),
-                      m_selectedUnit ? QString::fromUtf8("单位") : QString::fromUtf8("无"));
+    int sel = selectedItems().size();
+    emit statsChanged(m_gold, m_workers.size(), m_soldiers.size(), sel, m_waveNumber);
     return true;
 }
 
-void GameScene::selectUnit(Unit* unit)
+void GameScene::commandSelectedUnits(const QPointF& scenePos, QGraphicsItem* clickedItem)
 {
-    if (m_selectedUnit)
-        m_selectedUnit->setSelected(false);
-    m_selectedUnit = unit;
-    if (unit)
-        unit->setSelected(true);
+    QList<QGraphicsItem*> sel = selectedItems();
+    ResourceNode* resource = qgraphicsitem_cast<ResourceNode*>(clickedItem);
+    Enemy* enemy = qgraphicsitem_cast<Enemy*>(clickedItem);
+
+    // Calculate formation offset for multi-unit move
+    int idx = 0;
+    int cols = static_cast<int>(std::ceil(std::sqrt(static_cast<double>(sel.size()))));
+
+    for (auto* item : sel) {
+        Worker* worker = qgraphicsitem_cast<Worker*>(item);
+        Soldier* soldier = qgraphicsitem_cast<Soldier*>(item);
+
+        if (worker) {
+            if (resource && !resource->isDepleted()) {
+                worker->gatherFrom(resource);
+            } else {
+                // Formation spread
+                double ox = (idx % cols - cols / 2.0) * 25;
+                double oy = (idx / cols - cols / 2.0) * 25;
+                worker->moveTo(scenePos + QPointF(ox, oy));
+            }
+        } else if (soldier) {
+            if (enemy && !enemy->isDead()) {
+                soldier->attackTarget(enemy);
+            } else {
+                double ox = (idx % cols - cols / 2.0) * 25;
+                double oy = (idx / cols - cols / 2.0) * 25;
+                soldier->moveTo(scenePos + QPointF(ox, oy));
+            }
+        }
+        idx++;
+    }
 }
 
 void GameScene::mousePressEvent(QGraphicsSceneMouseEvent* event)
 {
-    if (m_gameOver) {
+    if (m_gameOver || m_paused) {
         QGraphicsScene::mousePressEvent(event);
         return;
     }
 
-    QGraphicsItem* item = itemAt(event->scenePos(), QTransform());
-
-    if (event->button() == Qt::LeftButton) {
-        Worker* worker = qgraphicsitem_cast<Worker*>(item);
-        Soldier* soldier = qgraphicsitem_cast<Soldier*>(item);
-        QString selName = QString::fromUtf8("无");
-        if (worker) {
-            selectUnit(worker);
-            selName = QString::fromUtf8("工人");
-        } else if (soldier) {
-            selectUnit(soldier);
-            selName = QString::fromUtf8("士兵");
-        } else {
-            selectUnit(nullptr);
-        }
-        emit statsChanged(m_gold, m_workers.size(), m_soldiers.size(), selName);
-    } else if (event->button() == Qt::RightButton) {
-        if (m_selectedUnit) {
-            Worker* worker = qgraphicsitem_cast<Worker*>(m_selectedUnit);
-            Soldier* soldier = qgraphicsitem_cast<Soldier*>(m_selectedUnit);
-
-            if (worker) {
-                ResourceNode* resource = qgraphicsitem_cast<ResourceNode*>(item);
-                if (resource && !resource->isDepleted()) {
-                    worker->gatherFrom(resource);
-                } else {
-                    worker->moveTo(event->scenePos());
-                }
-            } else if (soldier) {
-                Enemy* enemy = qgraphicsitem_cast<Enemy*>(item);
-                if (enemy && !enemy->isDead()) {
-                    soldier->attackTarget(enemy);
-                } else {
-                    soldier->moveTo(event->scenePos());
-                }
-            }
+    if (event->button() == Qt::RightButton) {
+        QGraphicsItem* item = itemAt(event->scenePos(), QTransform());
+        QList<QGraphicsItem*> sel = selectedItems();
+        if (!sel.isEmpty()) {
+            commandSelectedUnits(event->scenePos(), item);
         }
     }
 
@@ -154,10 +179,10 @@ void GameScene::mousePressEvent(QGraphicsSceneMouseEvent* event)
 void GameScene::spawnEnemy()
 {
     m_waveNumber++;
-    int count = 1 + m_waveNumber / 3; // increases over time
+    updateHUD();
 
+    int count = 1 + m_waveNumber / 3;
     for (int i = 0; i < count; i++) {
-        // Random spawn at map edges
         double x, y;
         int edge = std::rand() % 4;
         switch (edge) {
@@ -166,16 +191,23 @@ void GameScene::spawnEnemy()
         case 2: x = std::rand() % 1160 + 20; y = 20;              break;
         case 3: x = std::rand() % 1160 + 20; y = 880;             break;
         }
-
         Enemy* e = new Enemy(QPointF(x, y), m_base);
         m_enemies.append(e);
         addItem(e);
     }
 }
 
+void GameScene::spawnBoss()
+{
+    double x = std::rand() % 1160 + 20;
+    double y = std::rand() % 2 ? 20 : 880;
+    BossEnemy* boss = new BossEnemy(QPointF(x, y), m_base);
+    m_enemies.append(boss);
+    addItem(boss);
+}
+
 void GameScene::cleanDeadUnits()
 {
-    // Collect dead units
     QList<Worker*> deadWorkers;
     for (auto* w : m_workers) {
         if (w->isDead()) deadWorkers.append(w);
@@ -191,7 +223,7 @@ void GameScene::cleanDeadUnits()
         if (e->isDead()) deadEnemies.append(e);
     }
 
-    // Clear cross-references before deletion (prevent dangling pointers)
+    // Clear cross-references
     for (auto* ds : deadSoldiers) {
         for (auto* e : m_enemies) {
             if (e->attackTarget() == ds)
@@ -205,27 +237,23 @@ void GameScene::cleanDeadUnits()
         }
     }
 
-    // Delete dead workers
     for (auto* w : deadWorkers) {
         m_workers.removeOne(w);
-        if (m_selectedUnit == w) selectUnit(nullptr);
         removeItem(w);
         delete w;
     }
 
-    // Delete dead soldiers
     for (auto* s : deadSoldiers) {
         m_soldiers.removeOne(s);
-        if (m_selectedUnit == s) selectUnit(nullptr);
         removeItem(s);
         delete s;
     }
 
-    // Delete dead enemies
     for (auto* e : deadEnemies) {
         m_enemies.removeOne(e);
+        bool isBoss = (qgraphicsitem_cast<BossEnemy*>(e) != nullptr);
+        m_gold += isBoss ? 50 : 15;
         removeItem(e);
-        m_gold += 15;
         delete e;
     }
 }
@@ -235,30 +263,54 @@ void GameScene::checkGameOver()
     if (m_base->isDestroyed() && !m_gameOver) {
         m_gameOver = true;
         m_timer->stop();
+        updateHUD();
         emit gameOver(false);
     }
+    if (m_waveNumber >= m_maxWaves && m_enemies.isEmpty() && !m_gameOver) {
+        m_gameOver = true;
+        m_victory = true;
+        m_timer->stop();
+        updateHUD();
+        emit gameOver(true);
+    }
+}
+
+void GameScene::updateHUD()
+{
+    if (!m_hudText) return;
+    QString status;
+    if (m_paused)
+        status = QString::fromUtf8("暂停中");
+    else if (m_victory)
+        status = QString::fromUtf8("胜利!");
+    else if (m_base->isDestroyed())
+        status = QString::fromUtf8("失败!");
+    else
+        status = QString::fromUtf8("第 %1 / %2 波").arg(m_waveNumber).arg(m_maxWaves);
+
+    m_hudText->setPlainText(QString::fromUtf8("金矿: %1    %3    HP: %2")
+                                .arg(m_gold)
+                                .arg(m_base ? m_base->health() : 0)
+                                .arg(status));
 }
 
 void GameScene::gameTick()
 {
-    if (m_gameOver)
+    if (m_gameOver || m_paused)
         return;
 
-    // Update workers
     for (auto* w : m_workers)
         w->updateUnit();
 
-    // Collect gold from workers
     for (auto* w : m_workers)
         m_gold += w->takeDepositedGold();
 
-    // Soldier auto-target: scan for enemies and auto-engage idle soldiers
+    // Soldier auto-target
     for (auto* s : m_soldiers) {
         if (s->isDead()) continue;
         if (s->currentTarget() == nullptr) {
-            // Find nearest enemy for idle soldiers
             Enemy* nearest = nullptr;
-            double bestDist = 120; // scan range
+            double bestDist = s->isAttackMove() ? 150 : 120;
             for (auto* e : m_enemies) {
                 if (e->isDead()) continue;
                 double dx = s->scenePos().x() - e->scenePos().x();
@@ -269,34 +321,31 @@ void GameScene::gameTick()
                     nearest = e;
                 }
             }
-            if (nearest) {
+            if (nearest)
                 s->attackTarget(nearest);
-            }
         }
         s->updateUnit();
     }
 
-    // Update enemies
     for (auto* e : m_enemies)
         e->updateUnit();
 
-    // Cleanup
     cleanDeadUnits();
     checkGameOver();
 
-    // Enemy spawning
-    m_enemySpawnTimer--;
-    if (m_enemySpawnTimer <= 0) {
-        spawnEnemy();
-        m_enemySpawnTimer = 200; // every 10 seconds
+    // Enemy spawning (stop after max waves reached)
+    if (!m_gameOver && m_waveNumber < m_maxWaves) {
+        m_enemySpawnTimer--;
+        if (m_enemySpawnTimer <= 0) {
+            spawnEnemy();
+            // Boss every 5 waves
+            if (m_waveNumber % 5 == 0)
+                spawnBoss();
+            m_enemySpawnTimer = 200;
+        }
     }
 
-    QString selName = QString::fromUtf8("无");
-    if (m_selectedUnit) {
-        if (qgraphicsitem_cast<Worker*>(m_selectedUnit))
-            selName = QString::fromUtf8("工人");
-        else if (qgraphicsitem_cast<Soldier*>(m_selectedUnit))
-            selName = QString::fromUtf8("士兵");
-    }
-    emit statsChanged(m_gold, m_workers.size(), m_soldiers.size(), selName);
+    updateHUD();
+    int sel = selectedItems().size();
+    emit statsChanged(m_gold, m_workers.size(), m_soldiers.size(), sel, m_waveNumber);
 }

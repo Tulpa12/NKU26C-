@@ -1,16 +1,15 @@
 #include "building.h"
+#include "texturemanager.h"
 #include <QPainter>
 #include <QPen>
 #include <QFont>
 
 CommandCenter::CommandCenter(const QPointF& pos, QGraphicsItem* parent)
-    : QGraphicsRectItem(-40, -40, 80, 80, parent)
+    : QGraphicsRectItem(-42, -42, 84, 84, parent)
     , m_hp(300)
     , m_maxHp(300)
 {
     setPos(pos);
-    setBrush(QColor(200, 170, 50));
-    setPen(QPen(Qt::black, 3));
     setZValue(0);
 }
 
@@ -27,26 +26,24 @@ int CommandCenter::maxHealth() const { return m_maxHp; }
 void CommandCenter::paint(QPainter* painter, const QStyleOptionGraphicsItem* option,
                           QWidget* widget)
 {
-    QGraphicsRectItem::paint(painter, option, widget);
+    Q_UNUSED(option);
+    Q_UNUSED(widget);
 
-    // Label
-    painter->setPen(Qt::black);
-    painter->setFont(QFont("Arial", 8, QFont::Bold));
-    painter->drawText(boundingRect(), Qt::AlignCenter,
-                      QString::fromUtf8("基地"));
+    const QPixmap& tex = TextureManager::instance().baseTex();
+    painter->drawPixmap(rect().toRect(), tex);
 
     // Health bar
     if (m_hp < m_maxHp) {
-        double w = 80;
+        double w = 84;
         double barH = 6;
         double y = -50;
 
         painter->setPen(Qt::NoPen);
         painter->setBrush(Qt::red);
-        painter->drawRect(QRectF(-40, y, w, barH));
+        painter->drawRect(QRectF(-42, y, w, barH));
 
         double ratio = static_cast<double>(m_hp) / m_maxHp;
         painter->setBrush(Qt::green);
-        painter->drawRect(QRectF(-40, y, w * ratio, barH));
+        painter->drawRect(QRectF(-42, y, w * ratio, barH));
     }
 }

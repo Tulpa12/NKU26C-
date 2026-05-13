@@ -22,18 +22,17 @@ public:
     void paint(QPainter* painter, const QStyleOptionGraphicsItem* option,
                QWidget* widget) override;
 
-private:
+protected:
     enum State { MOVING_TO_TARGET, ATTACKING_UNIT, ATTACKING_BASE };
 
     State m_state;
     CommandCenter* m_baseTarget;
     Soldier* m_attackTarget;
     int m_attackCooldown;
-
-    static constexpr int ATTACK_DAMAGE = 5;
-    static constexpr int ATTACK_RANGE = 35;
-    static constexpr int ATTACK_COOLDOWN = 30;
-    static constexpr int AGGRO_RANGE = 100;
+    int m_attackDamage;
+    int m_attackRange;
+    int m_attackCooldownMax;
+    int m_aggroRange;
 };
 
 #endif

@@ -1,5 +1,6 @@
 #include "unit.h"
 #include <QPen>
+#include <QStyleOptionGraphicsItem>
 #include <cmath>
 
 Unit::Unit(int maxHp, double speed, const QPointF& pos, const QRectF& rect,
@@ -8,7 +9,6 @@ Unit::Unit(int maxHp, double speed, const QPointF& pos, const QRectF& rect,
     , m_hp(maxHp)
     , m_maxHp(maxHp)
     , m_speed(speed)
-    , m_selected(false)
 {
     setPos(pos);
     setZValue(1);
@@ -23,14 +23,6 @@ void Unit::takeDamage(int dmg)
 bool Unit::isDead() const { return m_hp <= 0; }
 int Unit::health() const { return m_hp; }
 int Unit::maxHealth() const { return m_maxHp; }
-
-void Unit::setSelected(bool sel)
-{
-    m_selected = sel;
-    update();
-}
-
-bool Unit::isSelected() const { return m_selected; }
 
 bool Unit::moveTowards(const QPointF& target)
 {
@@ -50,17 +42,16 @@ bool Unit::moveTowards(const QPointF& target)
 void Unit::paint(QPainter* painter, const QStyleOptionGraphicsItem* option,
                   QWidget* widget)
 {
-    Q_UNUSED(option);
     Q_UNUSED(widget);
 
-    painter->drawRect(rect());
-
-    if (m_selected) {
+    // Selection indicator
+    if (option->state & QStyle::State_Selected) {
         painter->setBrush(Qt::NoBrush);
         painter->setPen(QPen(Qt::green, 1.5, Qt::DashLine));
         painter->drawRect(rect().adjusted(-4, -4, 4, 4));
     }
 
+    // Health bar
     if (m_hp < m_maxHp) {
         double w = rect().width() * 1.2;
         double barH = 4;

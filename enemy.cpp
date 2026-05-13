@@ -1,20 +1,23 @@
 #include "enemy.h"
 #include "soldier.h"
 #include "building.h"
+#include "texturemanager.h"
 #include <QGraphicsScene>
 #include <QPainter>
 #include <QPen>
 #include <cmath>
 
 Enemy::Enemy(const QPointF& pos, CommandCenter* base, QGraphicsItem* parent)
-    : Unit(40, 1.5, pos, QRectF(-10, -10, 20, 20), parent)
+    : Unit(40, 1.5, pos, QRectF(-16, -16, 32, 32), parent)
     , m_state(MOVING_TO_TARGET)
     , m_baseTarget(base)
     , m_attackTarget(nullptr)
     , m_attackCooldown(0)
+    , m_attackDamage(5)
+    , m_attackRange(35)
+    , m_attackCooldownMax(30)
+    , m_aggroRange(100)
 {
-    setBrush(Qt::red);
-    setPen(QPen(QColor(150, 0, 0), 1));
 }
 
 void Enemy::updateUnit()
@@ -25,13 +28,11 @@ void Enemy::updateUnit()
     if (m_attackCooldown > 0)
         m_attackCooldown--;
 
-    // Validate targets
     if (m_attackTarget && m_attackTarget->isDead())
         m_attackTarget = nullptr;
 
-    // Always check for nearby soldiers (aggro)
     Soldier* nearbySoldier = nullptr;
-    double closestDist = AGGRO_RANGE;
+    double closestDist = m_aggroRange;
     for (auto* item : scene()->items()) {
         Soldier* s = qgraphicsitem_cast<Soldier*>(item);
         if (!s || s->isDead())
@@ -50,7 +51,6 @@ void Enemy::updateUnit()
         m_state = ATTACKING_UNIT;
     }
 
-    // Attack logic
     if (m_state == ATTACKING_UNIT) {
         if (!m_attackTarget) {
             m_state = MOVING_TO_TARGET;
@@ -61,10 +61,10 @@ void Enemy::updateUnit()
         double dy = scenePos().y() - m_attackTarget->scenePos().y();
         double dist = std::sqrt(dx * dx + dy * dy);
 
-        if (dist <= ATTACK_RANGE) {
+        if (dist <= m_attackRange) {
             if (m_attackCooldown <= 0) {
-                m_attackTarget->takeDamage(ATTACK_DAMAGE);
-                m_attackCooldown = ATTACK_COOLDOWN;
+                m_attackTarget->takeDamage(m_attackDamage);
+                m_attackCooldown = m_attackCooldownMax;
             }
         } else {
             moveTowards(m_attackTarget->scenePos());
@@ -72,23 +72,21 @@ void Enemy::updateUnit()
         return;
     }
 
-    // Attack base if in range
     if (m_baseTarget && !m_baseTarget->isDestroyed()) {
         double dx = scenePos().x() - m_baseTarget->scenePos().x();
         double dy = scenePos().y() - m_baseTarget->scenePos().y();
         double dist = std::sqrt(dx * dx + dy * dy);
 
-        if (dist <= ATTACK_RANGE + 30) {
+        if (dist <= m_attackRange + 30) {
             m_state = ATTACKING_BASE;
             if (m_attackCooldown <= 0) {
-                m_baseTarget->takeDamage(ATTACK_DAMAGE);
-                m_attackCooldown = ATTACK_COOLDOWN;
+                m_baseTarget->takeDamage(m_attackDamage);
+                m_attackCooldown = m_attackCooldownMax;
             }
             return;
         }
     }
 
-    // Default: move toward base
     m_state = MOVING_TO_TARGET;
     if (m_baseTarget)
         moveTowards(m_baseTarget->scenePos());
@@ -97,8 +95,8 @@ void Enemy::updateUnit()
 void Enemy::paint(QPainter* painter, const QStyleOptionGraphicsItem* option,
                   QWidget* widget)
 {
-    painter->setBrush(Qt::red);
-    painter->setPen(QPen(QColor(150, 0, 0), 1));
+    const QPixmap& tex = TextureManager::instance().enemyTex();
+    painter->drawPixmap(rect().toRect(), tex);
 
     Unit::paint(painter, option, widget);
 }

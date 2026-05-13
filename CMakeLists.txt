@@ -17,6 +17,8 @@ set(PROJECT_SOURCES
         mainwindow.cpp
         mainwindow.h
         mainwindow.ui
+        texturemanager.cpp
+        texturemanager.h
         unit.cpp
         unit.h
         worker.cpp
@@ -25,6 +27,8 @@ set(PROJECT_SOURCES
         soldier.h
         enemy.cpp
         enemy.h
+        bossenemy.cpp
+        bossenemy.h
         building.cpp
         building.h
         resource.cpp
