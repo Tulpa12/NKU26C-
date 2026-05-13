@@ -2,6 +2,7 @@
 #define ENEMY_H
 
 #include "unit.h"
+#include <QPointer>
 
 class Soldier;
 class CommandCenter;
@@ -24,7 +25,7 @@ private:
 
     State m_state;
     CommandCenter* m_baseTarget;
-    Soldier* m_attackTarget;
+    QPointer<Soldier> m_attackTarget;
     int m_attackCooldown;
 
     static constexpr int ATTACK_DAMAGE = 5;

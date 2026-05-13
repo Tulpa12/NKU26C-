@@ -2,6 +2,7 @@
 #include "enemy.h"
 #include <QPainter>
 #include <QPen>
+#include <cmath>
 
 Soldier::Soldier(const QPointF& pos, QGraphicsItem* parent)
     : Unit(60, 2.5, pos, QRectF(-11, -11, 22, 22), parent)
