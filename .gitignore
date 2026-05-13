@@ -1,0 +1,37 @@
+# Qt/C++ build artifacts
+build/
+*.pro.user
+*.pro.user.*
+*.qbs.user
+*.qbs.user.*
+*.moc
+moc_*.cpp
+moc_*.h
+qrc_*.cpp
+ui_*.h
+*.o
+*.obj
+*.exe
+*.dll
+*.so
+*.dylib
+Makefile
+*.make
+CMakeLists.txt.user
+CMakeCache.txt
+CMakeFiles/
+cmake_install.cmake
+*.cmake
+!CMakeLists.txt
+
+# IDE
+.qtc_clangd/
+.qtcreator/
+*.autosave
+*.swp
+*.swo
+*~
+
+# OS
+.DS_Store
+Thumbs.db
