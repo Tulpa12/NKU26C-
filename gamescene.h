@@ -23,6 +23,8 @@ public:
     void startGame();
     bool spawnWorker();
     bool spawnSoldier();
+    bool spawnArcher();
+    bool spawnTank();
     int totalGold() const { return m_gold; }
     int workerCount() const { return m_workers.size(); }
     int soldierCount() const { return m_soldiers.size(); }
@@ -45,6 +47,7 @@ private slots:
 private:
     void spawnEnemy();
     void spawnBoss();
+    void applyWaveScaling(Enemy* e);
     void cleanDeadUnits();
     void checkGameOver();
     void commandSelectedUnits(const QPointF& scenePos, QGraphicsItem* clickedItem);
@@ -61,6 +64,9 @@ private:
     int m_enemySpawnTimer;
     int m_waveNumber;
     int m_maxWaves;
+    bool m_waveWarning;
+    int m_waveWarningTimer;
+    QGraphicsTextItem* m_countdownText;
     bool m_gameOver;
     bool m_victory;
     bool m_paused;

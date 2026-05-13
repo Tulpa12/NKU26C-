@@ -1,4 +1,4 @@
-#include "soldier.h"
+#include "archer.h"
 #include "enemy.h"
 #include "texturemanager.h"
 #include <QPainter>
@@ -6,35 +6,19 @@
 #include <QStyleOptionGraphicsItem>
 #include <cmath>
 
-Soldier::Soldier(const QPointF& pos, QGraphicsItem* parent)
-    : Unit(60, 2.5, pos, QRectF(-16, -16, 32, 32), parent)
-    , m_state(IDLE)
-    , m_attackTarget(nullptr)
-    , m_attackCooldown(0)
-    , m_attackMove(false)
-    , m_attackDamage(ATTACK_DAMAGE)
-    , m_attackRange(ATTACK_RANGE)
-    , m_attackCooldownMax(ATTACK_COOLDOWN)
+Archer::Archer(const QPointF& pos, QGraphicsItem* parent)
+    : Soldier(pos, parent)
 {
-    setFlag(QGraphicsItem::ItemIsSelectable, true);
+    m_maxHp = 35;
+    m_hp = 35;
+    m_speed = 2.2;
+    m_attackDamage = 12;
+    m_attackRange = 130;
+    m_attackCooldownMax = 25;
+    setRect(-16, -16, 32, 32);
 }
 
-void Soldier::moveTo(const QPointF& target)
-{
-    m_state = MOVING;
-    m_moveTarget = target;
-    m_attackTarget = nullptr;
-}
-
-void Soldier::attackTarget(Enemy* enemy)
-{
-    if (!enemy || enemy->isDead())
-        return;
-    m_state = ATTACKING;
-    m_attackTarget = enemy;
-}
-
-void Soldier::updateUnit()
+void Archer::updateUnit()
 {
     if (isDead())
         return;
@@ -58,6 +42,12 @@ void Soldier::updateUnit()
         double dist = std::sqrt(dx * dx + dy * dy);
 
         if (dist <= m_attackRange) {
+            // Kite: back away if enemy is too close
+            if (dist < SAFE_DISTANCE && dist > 0) {
+                QPointF away = scenePos() + QPointF(dx / dist * m_speed * 2,
+                                                     dy / dist * m_speed * 2);
+                setPos(away);
+            }
             if (m_attackCooldown <= 0) {
                 m_attackTarget->takeDamage(m_attackDamage);
                 m_attackCooldown = m_attackCooldownMax;
@@ -76,15 +66,14 @@ void Soldier::updateUnit()
     }
 }
 
-void Soldier::paint(QPainter* painter, const QStyleOptionGraphicsItem* option,
+void Archer::paint(QPainter* painter, const QStyleOptionGraphicsItem* option,
                     QWidget* widget)
 {
-    const QPixmap& tex = TextureManager::instance().soldierTex();
+    const QPixmap& tex = TextureManager::instance().archerTex();
     painter->drawPixmap(rect().toRect(), tex);
 
     Unit::paint(painter, option, widget);
 
-    // Attack-move indicator
     if (m_attackMove) {
         painter->setPen(QPen(Qt::red, 2));
         painter->setBrush(Qt::NoBrush);

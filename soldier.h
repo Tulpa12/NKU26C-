@@ -23,15 +23,21 @@ public:
     enum { Type = QGraphicsItem::UserType + 4 };
     int type() const override { return Type; }
 
+    virtual double searchRange() const { return m_attackMove ? 150 : 120; }
+
     void paint(QPainter* painter, const QStyleOptionGraphicsItem* option,
                QWidget* widget) override;
 
-private:
+protected:
     State m_state;
     QPointF m_moveTarget;
     Enemy* m_attackTarget;
     int m_attackCooldown;
     bool m_attackMove;
+
+    int m_attackDamage;
+    int m_attackRange;
+    int m_attackCooldownMax;
 
     static constexpr int ATTACK_DAMAGE = 8;
     static constexpr int ATTACK_RANGE = 50;

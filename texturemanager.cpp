@@ -19,49 +19,80 @@ TextureManager::TextureManager()
         m_basePath = QApplication::applicationDirPath() + "/../images/";
     }
     if (!QDir(m_basePath).exists()) {
-        // Fallback: use source-relative path (when running from build dir)
         m_basePath = QApplication::applicationDirPath() + "/../../images/";
     }
 
+    m_skinPath = m_basePath + "skins/";
+    m_bgPath = m_basePath + "backgrounds/";
+
     generateDefaults();
 
-    // Try loading default pack
-    if (QDir(m_basePath + "default").exists())
-        loadPack("default");
+    // Try loading default skin and background
+    if (QDir(m_skinPath + "default").exists())
+        loadSkinPack("default");
+
+    QString defaultBg = m_bgPath + "default.png";
+    if (QFile::exists(defaultBg))
+        m_background = QPixmap(defaultBg);
 }
 
-QStringList TextureManager::availablePacks() const
+QStringList TextureManager::availableSkinPacks() const
 {
     QStringList packs;
-    QDir dir(m_basePath);
+    QDir dir(m_skinPath);
     if (!dir.exists()) return packs;
     for (const auto& entry : dir.entryInfoList(QDir::Dirs | QDir::NoDotAndDotDot))
         packs.append(entry.fileName());
     return packs;
 }
 
-QString TextureManager::currentPack() const { return m_currentPack; }
-
-void TextureManager::loadPack(const QString& packFolder)
+QStringList TextureManager::availableBackgrounds() const
 {
-    QString path = m_basePath + packFolder + "/";
-    m_currentPack = packFolder;
+    QStringList bgs;
+    QDir dir(m_bgPath);
+    if (!dir.exists()) return bgs;
+    for (const auto& entry : dir.entryInfoList(QDir::Files)) {
+        if (entry.suffix().toLower() == "png")
+            bgs.append(entry.fileName());
+    }
+    return bgs;
+}
+
+QString TextureManager::currentSkin() const { return m_currentSkin; }
+QString TextureManager::currentBackground() const { return m_currentBg; }
+
+void TextureManager::loadSkinPack(const QString& packFolder)
+{
+    QString path = m_skinPath + packFolder + "/";
+    m_currentSkin = packFolder;
 
     auto loadImg = [&](const QString& name, QPixmap& target) {
         QString file = path + name;
         if (QFile::exists(file)) {
             target = QPixmap(file);
         }
-        // else keep default
     };
 
     loadImg("worker.png", m_worker);
     loadImg("soldier.png", m_soldier);
+    loadImg("archer.png", m_archer);
+    loadImg("tank.png", m_tank);
     loadImg("enemy.png", m_enemy);
+    loadImg("fastenemy.png", m_fastenemy);
+    loadImg("heavyenemy.png", m_heavyenemy);
+    loadImg("rangedenemy.png", m_rangedenemy);
     loadImg("boss.png", m_boss);
     loadImg("base.png", m_base);
     loadImg("goldmine.png", m_goldmine);
-    loadImg("background.png", m_background);
+}
+
+void TextureManager::loadBackgroundFile(const QString& filename)
+{
+    QString file = m_bgPath + filename;
+    if (QFile::exists(file)) {
+        m_background = QPixmap(file);
+        m_currentBg = filename;
+    }
 }
 
 void TextureManager::generateDefaults()
@@ -94,6 +125,34 @@ void TextureManager::generateDefaults()
         p.drawText(QRect(0, 0, 32, 32), Qt::AlignCenter, "S");
     }
 
+    // Archer - cyan rounded square
+    m_archer = QPixmap(32, 32);
+    m_archer.fill(Qt::transparent);
+    {
+        QPainter p(&m_archer);
+        p.setRenderHint(QPainter::Antialiasing);
+        p.setBrush(QColor(0, 180, 200));
+        p.setPen(QPen(QColor(0, 100, 130), 2));
+        p.drawRoundedRect(1, 1, 30, 30, 4, 4);
+        p.setPen(Qt::white);
+        p.setFont(QFont("Arial", 14, QFont::Bold));
+        p.drawText(QRect(0, 0, 32, 32), Qt::AlignCenter, "A");
+    }
+
+    // Tank - dark blue larger square
+    m_tank = QPixmap(36, 36);
+    m_tank.fill(Qt::transparent);
+    {
+        QPainter p(&m_tank);
+        p.setRenderHint(QPainter::Antialiasing);
+        p.setBrush(QColor(40, 60, 160));
+        p.setPen(QPen(QColor(20, 30, 100), 3));
+        p.drawRoundedRect(1, 1, 34, 34, 5, 5);
+        p.setPen(Qt::white);
+        p.setFont(QFont("Arial", 14, QFont::Bold));
+        p.drawText(QRect(0, 0, 36, 36), Qt::AlignCenter, "T");
+    }
+
     // Enemy - red rounded square
     m_enemy = QPixmap(32, 32);
     m_enemy.fill(Qt::transparent);
@@ -106,6 +165,51 @@ void TextureManager::generateDefaults()
         p.setPen(Qt::white);
         p.setFont(QFont("Arial", 14, QFont::Bold));
         p.drawText(QRect(0, 0, 32, 32), Qt::AlignCenter, "E");
+    }
+
+    // FastEnemy - orange small square
+    m_fastenemy = QPixmap(28, 28);
+    m_fastenemy.fill(Qt::transparent);
+    {
+        QPainter p(&m_fastenemy);
+        p.setRenderHint(QPainter::Antialiasing);
+        p.setBrush(QColor(240, 140, 30));
+        p.setPen(QPen(QColor(160, 80, 10), 2));
+        p.drawRoundedRect(1, 1, 26, 26, 3, 3);
+        p.setPen(Qt::white);
+        p.setFont(QFont("Arial", 11, QFont::Bold));
+        p.drawText(QRect(0, 0, 28, 28), Qt::AlignCenter, "F");
+    }
+
+    // HeavyEnemy - purple larger square
+    m_heavyenemy = QPixmap(40, 40);
+    m_heavyenemy.fill(Qt::transparent);
+    {
+        QPainter p(&m_heavyenemy);
+        p.setRenderHint(QPainter::Antialiasing);
+        p.setBrush(QColor(130, 20, 160));
+        p.setPen(QPen(QColor(70, 10, 90), 3));
+        p.drawRoundedRect(1, 1, 38, 38, 5, 5);
+        p.setPen(Qt::white);
+        p.setFont(QFont("Arial", 12, QFont::Bold));
+        p.drawText(QRect(0, 0, 40, 40), Qt::AlignCenter, "H");
+    }
+
+    // RangedEnemy - magenta small square with range indicator
+    m_rangedenemy = QPixmap(30, 30);
+    m_rangedenemy.fill(Qt::transparent);
+    {
+        QPainter p(&m_rangedenemy);
+        p.setRenderHint(QPainter::Antialiasing);
+        p.setBrush(QColor(200, 40, 140));
+        p.setPen(QPen(QColor(120, 10, 70), 2));
+        p.drawRoundedRect(1, 1, 28, 28, 3, 3);
+        p.setPen(QPen(Qt::white, 1.5));
+        p.drawLine(15, 5, 15, 12);
+        p.drawLine(8, 15, 22, 15);
+        p.drawEllipse(10, 10, 10, 10);
+        p.setFont(QFont("Arial", 10, QFont::Bold));
+        p.drawText(QRect(0, 16, 30, 14), Qt::AlignCenter, "R");
     }
 
     // Boss - dark red large
@@ -181,7 +285,12 @@ void TextureManager::generateDefaults()
 
 const QPixmap& TextureManager::workerTex() const { return m_worker; }
 const QPixmap& TextureManager::soldierTex() const { return m_soldier; }
+const QPixmap& TextureManager::archerTex() const { return m_archer; }
+const QPixmap& TextureManager::tankTex() const { return m_tank; }
 const QPixmap& TextureManager::enemyTex() const { return m_enemy; }
+const QPixmap& TextureManager::fastenemyTex() const { return m_fastenemy; }
+const QPixmap& TextureManager::heavyenemyTex() const { return m_heavyenemy; }
+const QPixmap& TextureManager::rangedenemyTex() const { return m_rangedenemy; }
 const QPixmap& TextureManager::bossTex() const { return m_boss; }
 const QPixmap& TextureManager::baseTex() const { return m_base; }
 const QPixmap& TextureManager::goldmineTex() const { return m_goldmine; }

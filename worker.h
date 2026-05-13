@@ -33,7 +33,7 @@ private:
     int m_pendingDeposit;
 
     static constexpr int HARVEST_TIME = 30;
-    static constexpr int CARRY_CAPACITY = 10;
+    static constexpr int CARRY_CAPACITY = 15;
 };
 
 #endif

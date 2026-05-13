@@ -11,6 +11,7 @@ public:
     Enemy(const QPointF& pos, CommandCenter* base, QGraphicsItem* parent = nullptr);
 
     void updateUnit() override;
+    void scaleStats(double hpMul, double dmgMul);
     CommandCenter* baseTarget() const { return m_baseTarget; }
 
     Soldier* attackTarget() const { return m_attackTarget; }

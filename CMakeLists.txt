@@ -25,8 +25,18 @@ set(PROJECT_SOURCES
         worker.h
         soldier.cpp
         soldier.h
+        archer.cpp
+        archer.h
+        tank.cpp
+        tank.h
         enemy.cpp
         enemy.h
+        fastenemy.cpp
+        fastenemy.h
+        heavyenemy.cpp
+        heavyenemy.h
+        rangedenemy.cpp
+        rangedenemy.h
         bossenemy.cpp
         bossenemy.h
         building.cpp

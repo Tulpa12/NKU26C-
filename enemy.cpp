@@ -20,6 +20,13 @@ Enemy::Enemy(const QPointF& pos, CommandCenter* base, QGraphicsItem* parent)
 {
 }
 
+void Enemy::scaleStats(double hpMul, double dmgMul)
+{
+    m_maxHp = static_cast<int>(m_maxHp * hpMul);
+    m_hp = m_maxHp;
+    m_attackDamage = static_cast<int>(m_attackDamage * dmgMul);
+}
+
 void Enemy::updateUnit()
 {
     if (isDead())
@@ -34,7 +41,7 @@ void Enemy::updateUnit()
     Soldier* nearbySoldier = nullptr;
     double closestDist = m_aggroRange;
     for (auto* item : scene()->items()) {
-        Soldier* s = qgraphicsitem_cast<Soldier*>(item);
+        Soldier* s = dynamic_cast<Soldier*>(item);
         if (!s || s->isDead())
             continue;
         double dx = scenePos().x() - s->scenePos().x();
