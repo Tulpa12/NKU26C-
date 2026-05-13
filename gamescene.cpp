@@ -175,10 +175,37 @@ void GameScene::spawnEnemy()
 
 void GameScene::cleanDeadUnits()
 {
+    // Collect dead units
     QList<Worker*> deadWorkers;
     for (auto* w : m_workers) {
         if (w->isDead()) deadWorkers.append(w);
     }
+
+    QList<Soldier*> deadSoldiers;
+    for (auto* s : m_soldiers) {
+        if (s->isDead()) deadSoldiers.append(s);
+    }
+
+    QList<Enemy*> deadEnemies;
+    for (auto* e : m_enemies) {
+        if (e->isDead()) deadEnemies.append(e);
+    }
+
+    // Clear cross-references before deletion (prevent dangling pointers)
+    for (auto* ds : deadSoldiers) {
+        for (auto* e : m_enemies) {
+            if (e->attackTarget() == ds)
+                e->clearAttackTarget();
+        }
+    }
+    for (auto* de : deadEnemies) {
+        for (auto* s : m_soldiers) {
+            if (s->currentTarget() == de)
+                s->clearTarget();
+        }
+    }
+
+    // Delete dead workers
     for (auto* w : deadWorkers) {
         m_workers.removeOne(w);
         if (m_selectedUnit == w) selectUnit(nullptr);
@@ -186,10 +213,7 @@ void GameScene::cleanDeadUnits()
         delete w;
     }
 
-    QList<Soldier*> deadSoldiers;
-    for (auto* s : m_soldiers) {
-        if (s->isDead()) deadSoldiers.append(s);
-    }
+    // Delete dead soldiers
     for (auto* s : deadSoldiers) {
         m_soldiers.removeOne(s);
         if (m_selectedUnit == s) selectUnit(nullptr);
@@ -197,14 +221,10 @@ void GameScene::cleanDeadUnits()
         delete s;
     }
 
-    QList<Enemy*> deadEnemies;
-    for (auto* e : m_enemies) {
-        if (e->isDead()) deadEnemies.append(e);
-    }
+    // Delete dead enemies
     for (auto* e : deadEnemies) {
         m_enemies.removeOne(e);
         removeItem(e);
-        // Reward gold for killing enemy
         m_gold += 15;
         delete e;
     }

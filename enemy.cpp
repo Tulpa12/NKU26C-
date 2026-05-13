@@ -1,6 +1,7 @@
 #include "enemy.h"
 #include "soldier.h"
 #include "building.h"
+#include <QGraphicsScene>
 #include <QPainter>
 #include <QPen>
 #include <cmath>

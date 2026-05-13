@@ -4,6 +4,7 @@
 #include <QGraphicsScene>
 #include <QList>
 #include <QTimer>
+#include "unit.h"
 
 class Worker;
 class Soldier;

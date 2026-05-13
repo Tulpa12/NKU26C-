@@ -2,7 +2,6 @@
 #define SOLDIER_H
 
 #include "unit.h"
-#include <QPointer>
 
 class Enemy;
 
@@ -17,6 +16,7 @@ public:
     void updateUnit() override;
 
     Enemy* currentTarget() const { return m_attackTarget; }
+    void clearTarget() { m_attackTarget = nullptr; m_state = IDLE; }
 
     enum { Type = QGraphicsItem::UserType + 4 };
     int type() const override { return Type; }
@@ -27,7 +27,7 @@ public:
 private:
     State m_state;
     QPointF m_moveTarget;
-    QPointer<Enemy> m_attackTarget;
+    Enemy* m_attackTarget;
     int m_attackCooldown;
 
     static constexpr int ATTACK_DAMAGE = 8;
