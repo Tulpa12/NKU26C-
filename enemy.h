@@ -6,12 +6,12 @@
 class Soldier;
 class CommandCenter;
 
-class Enemy : public Unit {
+class Enemy : public Unit {      //继承自unit
 public:
     Enemy(const QPointF& pos, CommandCenter* base, QGraphicsItem* parent = nullptr);
 
     void updateUnit() override;
-    void scaleStats(double hpMul, double dmgMul);
+    void scaleStats(double hpMul, double dmgMul);             //动态难度变化
     CommandCenter* baseTarget() const { return m_baseTarget; }
 
     Soldier* attackTarget() const { return m_attackTarget; }
@@ -24,7 +24,7 @@ public:
                QWidget* widget) override;
 
 protected:
-    enum State { MOVING_TO_TARGET, ATTACKING_UNIT, ATTACKING_BASE };
+    enum State { MOVING_TO_TARGET, ATTACKING_UNIT, ATTACKING_BASE };  //移动，攻击士兵，攻击基地
 
     State m_state;
     CommandCenter* m_baseTarget;

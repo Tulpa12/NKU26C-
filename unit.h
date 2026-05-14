@@ -4,7 +4,7 @@
 #include <QGraphicsRectItem>
 #include <QPainter>
 
-class Unit : public QGraphicsRectItem {
+class Unit : public QGraphicsRectItem {    //自动处理碰撞体积，选中等问题
 public:
     Unit(int maxHp, double speed, const QPointF& pos, const QRectF& rect,
          QGraphicsItem* parent = nullptr);

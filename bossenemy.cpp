@@ -3,7 +3,7 @@
 #include <QPainter>
 #include <QPen>
 #include <QFont>
-
+//只是改了数值的enemy
 BossEnemy::BossEnemy(const QPointF& pos, CommandCenter* base, QGraphicsItem* parent)
     : Enemy(pos, base, parent)
 {

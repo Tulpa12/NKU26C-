@@ -2,6 +2,7 @@
 #include "gamescene.h"
 #include "soldier.h"
 #include "texturemanager.h"
+#include "soundmanager.h"
 
 #include <QGraphicsView>
 #include <QStatusBar>
@@ -37,6 +38,15 @@ MainWindow::MainWindow(QWidget *parent)
     pauseAction->setCheckable(true);
     pauseAction->setShortcut(QKeySequence(Qt::Key_Space));
     toolbar->addSeparator();
+
+    // Mute button
+    QAction* muteAction = toolbar->addAction(QString::fromUtf8("静音"));
+    muteAction->setCheckable(true);
+    muteAction->setShortcut(QKeySequence(Qt::Key_M));
+    connect(muteAction, &QAction::toggled, this, [muteAction](bool checked) {
+        SoundManager::instance().setEnabled(!checked);
+        muteAction->setText(checked ? QString::fromUtf8("取消静音") : QString::fromUtf8("静音"));
+    });
 
     // Unit skin selector
     toolbar->addWidget(new QLabel(QString::fromUtf8(" 皮肤: ")));
@@ -118,7 +128,7 @@ MainWindow::MainWindow(QWidget *parent)
         pauseAction->setText(paused ? QString::fromUtf8("继续") : QString::fromUtf8("暂停"));
     });
 
-    connect(amoveAction, &QAction::toggled, this, [this, amoveAction](bool checked) {
+    connect(amoveAction, &QAction::toggled, this, [this, amoveAction](bool checked) {   //*A移动
         for (auto* item : m_scene->items()) {
             Soldier* s = dynamic_cast<Soldier*>(item);
             if (s) s->setAttackMove(checked);

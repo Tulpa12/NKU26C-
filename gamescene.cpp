@@ -11,6 +11,7 @@
 #include "building.h"
 #include "resource.h"
 #include "texturemanager.h"
+#include "soundmanager.h"
 #include <QGraphicsSceneMouseEvent>
 #include <QGraphicsTextItem>
 #include <QFont>
@@ -120,6 +121,7 @@ bool GameScene::spawnWorker()
                                     bp.y() + (std::rand() % 80) - 40), m_base);
     m_workers.append(w);
     addItem(w);
+    SoundManager::instance().playSpawn();
     int sel = selectedItems().size();
     emit statsChanged(m_gold, m_workers.size(), m_soldiers.size(), sel, m_waveNumber);
     return true;
@@ -134,6 +136,7 @@ bool GameScene::spawnSoldier()
                                       bp.y() + (std::rand() % 80) - 40));
     m_soldiers.append(s);
     addItem(s);
+    SoundManager::instance().playSpawn();
     int sel = selectedItems().size();
     emit statsChanged(m_gold, m_workers.size(), m_soldiers.size(), sel, m_waveNumber);
     return true;
@@ -148,6 +151,7 @@ bool GameScene::spawnArcher()
                                     bp.y() + (std::rand() % 80) - 40));
     m_soldiers.append(a);
     addItem(a);
+    SoundManager::instance().playSpawn();
     int sel = selectedItems().size();
     emit statsChanged(m_gold, m_workers.size(), m_soldiers.size(), sel, m_waveNumber);
     return true;
@@ -162,6 +166,7 @@ bool GameScene::spawnTank()
                                  bp.y() + (std::rand() % 80) - 40));
     m_soldiers.append(t);
     addItem(t);
+    SoundManager::instance().playSpawn();
     int sel = selectedItems().size();
     emit statsChanged(m_gold, m_workers.size(), m_soldiers.size(), sel, m_waveNumber);
     return true;
@@ -287,6 +292,7 @@ void GameScene::spawnBoss()
     applyWaveScaling(boss);
     m_enemies.append(boss);
     addItem(boss);
+    SoundManager::instance().playBoss();
 }
 
 void GameScene::cleanDeadUnits()
@@ -324,12 +330,14 @@ void GameScene::cleanDeadUnits()
         m_workers.removeOne(w);
         removeItem(w);
         delete w;
+        SoundManager::instance().playAllyDeath();
     }
 
     for (auto* s : deadSoldiers) {
         m_soldiers.removeOne(s);
         removeItem(s);
         delete s;
+        SoundManager::instance().playAllyDeath();
     }
 
     for (auto* e : deadEnemies) {
@@ -340,6 +348,7 @@ void GameScene::cleanDeadUnits()
         m_gold += isBoss ? 35 : (isHeavy ? 15 : (isRanged ? 10 : 8));
         removeItem(e);
         delete e;
+        SoundManager::instance().playEnemyDeath();
     }
 }
 
@@ -349,6 +358,7 @@ void GameScene::checkGameOver()
         m_gameOver = true;
         m_timer->stop();
         updateHUD();
+        SoundManager::instance().playDefeat();
         emit gameOver(false);
     }
     if (m_waveNumber >= m_maxWaves && m_enemies.isEmpty() && !m_gameOver) {
@@ -356,6 +366,7 @@ void GameScene::checkGameOver()
         m_victory = true;
         m_timer->stop();
         updateHUD();
+        SoundManager::instance().playVictory();
         emit gameOver(true);
     }
 }
@@ -389,8 +400,13 @@ void GameScene::gameTick()
     for (auto* w : m_workers)
         w->updateUnit();
 
-    for (auto* w : m_workers)
-        m_gold += w->takeDepositedGold();
+    for (auto* w : m_workers) {
+        int deposited = w->takeDepositedGold();
+        if (deposited > 0) {
+            m_gold += deposited;
+            SoundManager::instance().playGold();
+        }
+    }
 
     // Soldier auto-target
     for (auto* s : m_soldiers) {
@@ -445,6 +461,7 @@ void GameScene::gameTick()
                 m_waveWarning = true;
                 m_waveWarningTimer = 60;
                 m_countdownText->setVisible(true);
+                SoundManager::instance().playWave();
             }
         }
     }

@@ -2,6 +2,7 @@
 #include "soldier.h"
 #include "building.h"
 #include "texturemanager.h"
+#include "soundmanager.h"
 #include <QGraphicsScene>
 #include <QPainter>
 #include <QPen>
@@ -38,7 +39,7 @@ void Enemy::updateUnit()
     if (m_attackTarget && m_attackTarget->isDead())
         m_attackTarget = nullptr;
 
-    Soldier* nearbySoldier = nullptr;
+    Soldier* nearbySoldier = nullptr;  //仇恨系统
     double closestDist = m_aggroRange;
     for (auto* item : scene()->items()) {
         Soldier* s = dynamic_cast<Soldier*>(item);
@@ -58,7 +59,7 @@ void Enemy::updateUnit()
         m_state = ATTACKING_UNIT;
     }
 
-    if (m_state == ATTACKING_UNIT) {
+    if (m_state == ATTACKING_UNIT) {      //攻击系统
         if (!m_attackTarget) {
             m_state = MOVING_TO_TARGET;
             return;
@@ -72,6 +73,7 @@ void Enemy::updateUnit()
             if (m_attackCooldown <= 0) {
                 m_attackTarget->takeDamage(m_attackDamage);
                 m_attackCooldown = m_attackCooldownMax;
+                SoundManager::instance().playEnemyAttack();
             }
         } else {
             moveTowards(m_attackTarget->scenePos());
@@ -79,7 +81,7 @@ void Enemy::updateUnit()
         return;
     }
 
-    if (m_baseTarget && !m_baseTarget->isDestroyed()) {
+    if (m_baseTarget && !m_baseTarget->isDestroyed()) {          //攻击基地状态
         double dx = scenePos().x() - m_baseTarget->scenePos().x();
         double dy = scenePos().y() - m_baseTarget->scenePos().y();
         double dist = std::sqrt(dx * dx + dy * dy);
@@ -89,6 +91,7 @@ void Enemy::updateUnit()
             if (m_attackCooldown <= 0) {
                 m_baseTarget->takeDamage(m_attackDamage);
                 m_attackCooldown = m_attackCooldownMax;
+                SoundManager::instance().playBaseHit();
             }
             return;
         }

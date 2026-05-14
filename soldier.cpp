@@ -1,6 +1,7 @@
 #include "soldier.h"
 #include "enemy.h"
 #include "texturemanager.h"
+#include "soundmanager.h"
 #include <QPainter>
 #include <QPen>
 #include <QStyleOptionGraphicsItem>
@@ -61,6 +62,7 @@ void Soldier::updateUnit()
             if (m_attackCooldown <= 0) {
                 m_attackTarget->takeDamage(m_attackDamage);
                 m_attackCooldown = m_attackCooldownMax;
+                SoundManager::instance().playSoldierAttack();
             }
         } else {
             moveTowards(m_attackTarget->scenePos());
