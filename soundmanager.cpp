@@ -38,6 +38,24 @@ SoundManager::SoundManager()
     m_allyDeathTimer.start();
     m_enemyDeathTimer.start();
     m_goldTimer.start();
+
+    // Pre-warm all sounds to avoid first-play stutter.
+    // QSoundEffect decodes lazily — the first play() triggers audio device
+    // init and WAV decoding on the main thread. Playing at zero volume
+    // forces that work here (during construction) instead of mid-gameplay.
+    QSoundEffect* all[] = {m_spawn, m_soldierAttack, m_enemyAttack, m_baseHit,
+                           m_allyDeath, m_enemyDeath, m_gold, m_wave, m_boss,
+                           m_victory, m_defeat};
+    for (auto* e : all) {
+        if (e) {
+            qreal saved = e->volume();
+            e->setVolume(0);
+            e->play();
+            QApplication::processEvents();
+            e->stop();
+            e->setVolume(saved);
+        }
+    }
 }
 
 void SoundManager::loadSound(QSoundEffect*& effect, const QString& filename)

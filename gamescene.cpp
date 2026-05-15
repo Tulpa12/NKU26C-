@@ -69,6 +69,9 @@ void GameScene::reloadBackground()
 
 void GameScene::startGame()
 {
+    // Force SoundManager init + warmup now, not during first recruit
+    SoundManager::instance();
+
     m_base = new CommandCenter(QPointF(600, 450));
     addItem(m_base);
 
